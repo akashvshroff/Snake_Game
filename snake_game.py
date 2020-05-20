@@ -231,7 +231,7 @@ class SnakePlayer:
             self.clock.tick(30)
 
     def pop_up(self):
-        sc, self.score = self.score, 0
+        sc, self.score, self.delay = self.score, 0, 0.1
         self.snake_positions = [(300, 280)]
         self.current_direction = None
         death_text = 'YOUR SCORE WAS {:02}.'.format(sc)
