@@ -7,12 +7,6 @@ from tkinter import ttk
 import sqlite3
 from math import floor
 
-'''
-tkinter = bg = '#336699'
-tkinter = fg = '#f8f8ff'
-tkinter entry fg = '#336699'
-'''
-
 
 class SnakePlayer:
     def __init__(self, master):
