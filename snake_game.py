@@ -110,7 +110,7 @@ class SnakePlayer:
         self.user_name = ''
         self.current_direction = None
         self.food_position = 0, 0
-        self.delay = 0.1
+        self.delay = 0.2
         self.score = 0
 
         # pygame stuff
@@ -231,7 +231,7 @@ class SnakePlayer:
             self.clock.tick(30)
 
     def pop_up(self):
-        sc, self.score, self.delay = self.score, 0, 0.1
+        sc, self.score, self.delay = self.score, 0, 0.2
         self.snake_positions = [(300, 280)]
         self.current_direction = None
         death_text = 'YOUR SCORE WAS {:02}.'.format(sc)
@@ -299,6 +299,7 @@ class SnakePlayer:
 
     def quit_prg(self):
         # allows you to quit the program
+        pygame.exit()
         sys.exit()
 
     def change_tab(self, n):
