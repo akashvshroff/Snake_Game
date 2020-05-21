@@ -29,30 +29,37 @@ class SnakePlayer:
         self.start_frame = Frame(self.tab1, width=450, height=450, bg='#336699')
         self.start_frame.pack()
         self.title = Label(self.tab1, text='WELCOME TO SNAKE', font=(
-            'System', 21, 'bold'), fg='#f8f8ff', bg='#336699')
-        self.title.place(relx=0.15, rely=0.1)
-        self.rules = 'Eat as many of the pink food as you can grow but beware, if you eat yourself then you will die. If you collide with the wall, then you will stop moving. Move using the arrow keys, the larger you get, the faster you move. Enter your name below and get started.'
+            'System', 18, 'bold'), fg='#f8f8ff', bg='#336699')
+        self.title.place(relx=0.15, rely=0.05)
+        self.rules = 'Eat as much of the pink food as you can to grow but beware, if you eat yourself, you will die. On easy mode, if you collide with the wall, then you will stop moving. On hard, if you try to leave the bounds, you will die. For both, there will also be poison that is deep black. DO NOT EAT IT. Move using the arrow keys, the larger you get, the faster you move. Enter your name below, choose your difficulty and get started.'
         self.rules_display = Message(self.tab1, text=self.rules, fg='#f8f8ff', bg='#336699', width=450,
-                                     font=('System', 14), justify=LEFT)
-        self.rules_display.place(relx=0, rely=0.3)
+                                     font=('System', 12), justify=LEFT)
+        self.rules_display.place(relx=0, rely=0.15)
         self.login_text = StringVar()
         self.login_text.set("Enter username.")
         self.login_entry = Entry(self.tab1, textvariable=self.login_text, width=34,
                                  font=('System', 12, 'bold'), justify=LEFT, bg='#f8f8ff')
-        self.login_entry.place(relx=0.02, rely=0.62)
+        self.login_entry.place(relx=0.02, rely=0.58)
         self.login_btn = Button(self.tab1, fg='#f8f8ff', width=10, bg='#336699',
                                 font=('System', 12, 'bold'), text='SUBMIT', command=self.get_username)
-        self.login_btn.place(relx=0.74, rely=0.61)
+        self.login_btn.place(relx=0.74, rely=0.57)
+
+        self.easy_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699',
+                               font=('System', 12, 'bold'), text='EASY MODE', state=DISABLED, command=lambda: self.get_level(0))
+        self.hard_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699',
+                               font=('System', 12, 'bold'), text='HARD MODE', state=DISABLED, command=lambda: self.get_level(1))
+        self.easy_btn.place(relx=0.015, rely=0.68)
+        self.hard_btn.place(relx=0.515, rely=0.68)
 
         self.start_playing_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699', state=DISABLED,
                                         font=('System', 12, 'bold'), text='START GAME', command=self.play_game)
         self.leaderboard_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699',
                                       font=('System', 12, 'bold'), text='LEADERBOARD', command=lambda: self.change_tab(1))
         self.quit_program_btn = Button(self.tab1, fg='#f8f8ff', width=42,
-                                       bg='#336699', text='QUIT PROGRAM', font=('System', 12, 'bold'), command=self.quit_prg)
-        self.start_playing_btn.place(relx=0.015, rely=0.74)
-        self.leaderboard_btn.place(relx=0.515, rely=0.74)
-        self.quit_program_btn.place(relx=0.016, rely=0.86)
+                                       bg='#336699', text='QUIT THE PROGRAM', font=('System', 12, 'bold'), command=self.quit_prg)
+        self.start_playing_btn.place(relx=0.015, rely=0.78)
+        self.leaderboard_btn.place(relx=0.515, rely=0.78)
+        self.quit_program_btn.place(relx=0.017, rely=0.89)
 
         # tab2
         self.leaderboard_frame = Frame(self.tab2, width=450, height=450, bg='#336699')
@@ -83,7 +90,12 @@ class SnakePlayer:
         self.conn = sqlite3.connect(
             r'C:\Users\akush\Desktop\Programming\Projects\Snake\snake_scores.sqlite')
         self.cur = self.conn.cursor()
-        self.cur.execute('CREATE TABLE IF NOT EXISTS Scores (username text, score int)')
+        self.cur.execute(
+            'CREATE TABLE IF NOT EXISTS Scores (username text, score int, diff_id int)')
+        # 1 for easy, 2 for tough
+        self.cur.execute('CREATE TABLE IF NOT EXISTS Diff (name text, id primary key)')
+        self.cur.execute('INSERT INTO Diff (name, id) VALUES (?,?)', ('easy', 1),)
+        self.cur.execute('INSERT INTO Diff (name, id) VALUES (?,?)', ('hard', 2),)
 
         # regular variables
         Colour = namedtuple("Colour", ["r", "g", "b"])
@@ -92,9 +104,11 @@ class SnakePlayer:
         self.food_colour = Colour(r=255, g=102, b=153)
         self.text_colour = Colour(r=255, g=255, b=255)
         self.border_colour = Colour(r=242, g=242, b=242)
+        self.poison_colour = Colour(r=28, g=28, b=28)
         self.death_screen_colour = Colour(r=64, g=64, b=62)
         self.death_text_colour = Colour(r=236, g=33, b=33)
 
+        # pygame stuff
         self.win_width = 400
         self.win_height = 400
         self.start_x, self.end_x = 40, 340
@@ -110,10 +124,12 @@ class SnakePlayer:
         self.user_name = ''
         self.current_direction = None
         self.food_position = 0, 0
-        self.delay = 0.12
+        self.poison_position = None
+        self.delay = 0.2
+        self.delay_reduction = 0
         self.score = 0
-
-        # pygame stuff
+        self.easy_game = None
+        self.diff = ''
 
     def draw_grid(self):
         # draws the pygame grid
@@ -128,21 +144,35 @@ class SnakePlayer:
         # draws the food and the snake
         pygame.draw.rect(self.screen, self.food_colour, [
                          self.food_position, (self.segment_size, self.segment_size)])
-
+        if self.poison_position:
+            pygame.draw.rect(self.screen, self.poison_colour, [
+                             self.poison_position, (self.segment_size, self.segment_size)])
         for x, y in self.snake_positions:
             pygame.draw.rect(self.screen, self.snake_colour, [
                              x, y, self.segment_size, self.segment_size])
 
-    def set_new_food_positions(self, snake_positions):
+    def set_new_food_positions(self):
         # randomizes and checks the food position
         while True:
             x_position = randint(2, 17) * self.segment_size
             y_position = randint(2, 17) * self.segment_size
             food_position = (x_position, y_position)
-            if food_position in snake_positions:
+            if food_position in self.snake_positions:
                 continue
             else:
                 self.food_position = food_position
+                break
+
+    def set_poison_position(self):
+        # randomizes and checks the food position
+        while True:
+            x_position = randint(2, 17) * self.segment_size
+            y_position = randint(2, 17) * self.segment_size
+            poison_position = (x_position, y_position)
+            if poison_position in self.snake_positions or poison_position == food_position:
+                continue
+            else:
+                self.poison_position = poison_position
                 break
 
     def move_snake(self):
@@ -164,9 +194,35 @@ class SnakePlayer:
     def check_collisions(self, snake_positions):
         # checks the collisions with the wall and itself
         head_x, head_y = snake_positions[0]
-        if head_x < self.start_x or head_x > self.end_x or head_y < self.start_y or head_y > self.end_y:
-            return True
+        if self.easy_game:  # easy game
+            tail_x, tail_y = snake_positions[-1]
+            if head_x < self.start_x:
+                self.snake_positions.pop(0)
+                self.snake_positions.append((tail_x + 20, tail_y))
+                self.current_direction = None
+                return False
+            elif head_x > self.end_x:
+                self.snake_positions.pop(0)
+                self.snake_positions.append((tail_x - 20, tail_y))
+                self.current_direction = None
+                return False
+            elif head_y < self.start_y:
+                self.snake_positions.pop(0)
+                self.snake_positions.append((tail_x, tail_y + 20))
+                self.current_direction = None
+                return False
+            elif head_y > self.end_y:
+                self.snake_positions.pop(0)
+                self.snake_positions.append((tail_x, tail_y - 20))
+                self.current_direction = None
+                return False
+        else:
+            if head_x < self.start_x or head_x > self.end_x or head_y < self.start_y or head_y > self.end_y:
+                return True
+
         if (head_x, head_y) in snake_positions[1:]:
+            return True
+        if (head_x, head_y) == self.poison_position:
             return True
         return False
 
@@ -222,17 +278,25 @@ class SnakePlayer:
 
             if self.check_food_collision():
                 self.set_new_food_positions(self.snake_positions)
+                if not self.easy_game:  # for hard game there is a poison block that changes every time you eat.
+                    if self.score > 6:
+                        self.set_poison_position()
                 self.score += 1
                 if self.delay > 0.01:
-                    self.delay -= 0.005
+                    self.delay -= self.delay_reduction
                 else:
                     self.delay = 0.01
+
+            if self.easy_game:
+                if self.score > 5 and self.score % 6 == 0:
+                    self.set_poison_position()
 
             self.clock.tick(30)
 
     def pop_up(self):
-        sc, self.score, self.delay = self.score, 0, 0.12
+        sc, self.score, self.delay = self.score, 0, 0.2
         self.snake_positions = [(200, 180)]
+        self.poison_position = None
         self.current_direction = None
         death_text = 'YOUR SCORE WAS {:02}.'.format(sc)
         self.death_win = Tk()
@@ -267,12 +331,27 @@ class SnakePlayer:
     def get_username(self):
         # gets the user_name
         self.user_name = self.login_text.get()
+        self.easy_btn['state'] = NORMAL
+        self.hard_btn['state'] = NORMAL
+        self.login_text.set('All the best, {}. Choose a level.'.format(self.user_name))
+
+    def get_level(self, n):
+        if n == 0:
+            self.easy_game = True
+            self.diff = 'easy'
+            self.delay_reduction = 0.006
+        else:
+            self.easy_game = False
+            self.diff = 'hard'
+            self.delay_reduction = 0.003
+        self.login_text.set('All the best, {}. Level: {}.'.format(
+            self.user_name, self.diff.upper()))
         self.start_playing_btn['state'] = NORMAL
-        self.login_text.set('All the best, {}.'.format(self.user_name))
 
     def update_leaderboard(self):
         # updates the leaderboard after every turn
         # re-initialises score
+        'get the diff id and then do it'
         self.cur.execute('INSERT INTO Scores (username, score) VALUES (?,?)',
                          (self.user_name, self.score))
         self.conn.commit()
