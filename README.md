@@ -50,10 +50,10 @@
                 if self.check_food_collision():
                     self.set_new_food_positions(self.snake_positions)
                     self.score += 1
-                    if self.delay > 0:
-                        self.delay -= 0.01
+                    if self.delay > 0.01:
+                        self.delay -= 0.005
                     else:
-                        self.delay = 0
+                        self.delay = 0.01
 
                 self.clock.tick(30)
     ```

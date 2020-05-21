@@ -31,7 +31,7 @@ class SnakePlayer:
         self.title = Label(self.tab1, text='WELCOME TO SNAKE', font=(
             'System', 21, 'bold'), fg='#f8f8ff', bg='#336699')
         self.title.place(relx=0.15, rely=0.1)
-        self.rules = 'Eat as many of the pink food as you can grow but beware, if you collide with the wall or yourself then you will die. Move using the arrow keys, the larger you get, the faster you move. Enter your name below and get started.'
+        self.rules = 'Eat as many of the pink food as you can grow but beware, if you eat yourself then you will die. If you collide with the wall, then you will stop moving. Move using the arrow keys, the larger you get, the faster you move. Enter your name below and get started.'
         self.rules_display = Message(self.tab1, text=self.rules, fg='#f8f8ff', bg='#336699', width=450,
                                      font=('System', 14), justify=LEFT)
         self.rules_display.place(relx=0, rely=0.3)
@@ -95,10 +95,10 @@ class SnakePlayer:
         self.death_screen_colour = Colour(r=64, g=64, b=62)
         self.death_text_colour = Colour(r=236, g=33, b=33)
 
-        self.win_width = 600
-        self.win_height = 600
-        self.start_x, self.end_x = 40, 540
-        self.start_y, self.end_y = 40, 540
+        self.win_width = 400
+        self.win_height = 400
+        self.start_x, self.end_x = 40, 340
+        self.start_y, self.end_y = 40, 340
         self.segment_size = 20
 
         self.key_map = {273: "Up",
@@ -110,7 +110,7 @@ class SnakePlayer:
         self.user_name = ''
         self.current_direction = None
         self.food_position = 0, 0
-        self.delay = 0.2
+        self.delay = 0.12
         self.score = 0
 
         # pygame stuff
@@ -136,8 +136,8 @@ class SnakePlayer:
     def set_new_food_positions(self, snake_positions):
         # randomizes and checks the food position
         while True:
-            x_position = randint(2, 27) * self.segment_size
-            y_position = randint(2, 27) * self.segment_size
+            x_position = randint(2, 17) * self.segment_size
+            y_position = randint(2, 17) * self.segment_size
             food_position = (x_position, y_position)
             if food_position in snake_positions:
                 continue
@@ -192,7 +192,7 @@ class SnakePlayer:
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(self.win_dimensions)
 
-        self.snake_positions = [(300, 280)]
+        self.snake_positions = [(200, 180)]
         self.set_new_food_positions(self.snake_positions)
         while True:
             for event in pygame.event.get():
@@ -207,7 +207,7 @@ class SnakePlayer:
             score_text = font.render('SCORE: {:02}'.format(self.score), True, self.text_colour)
             user_text = font.render("NAME: {}".format(self.user_name), True, self.text_colour)
             self.screen.blit(user_text, (10, 10))
-            self.screen.blit(score_text, (500, 10))
+            self.screen.blit(score_text, (300, 10))
 
             pygame.display.update()
 
@@ -223,16 +223,16 @@ class SnakePlayer:
             if self.check_food_collision():
                 self.set_new_food_positions(self.snake_positions)
                 self.score += 1
-                if self.delay > 0:
-                    self.delay -= 0.01
+                if self.delay > 0.01:
+                    self.delay -= 0.005
                 else:
-                    self.delay = 0
+                    self.delay = 0.01
 
             self.clock.tick(30)
 
     def pop_up(self):
-        sc, self.score, self.delay = self.score, 0, 0.2
-        self.snake_positions = [(300, 280)]
+        sc, self.score, self.delay = self.score, 0, 0.12
+        self.snake_positions = [(200, 180)]
         self.current_direction = None
         death_text = 'YOUR SCORE WAS {:02}.'.format(sc)
         self.death_win = Tk()
@@ -299,7 +299,7 @@ class SnakePlayer:
 
     def quit_prg(self):
         # allows you to quit the program
-        pygame.exit()
+        pygame.quit()
         sys.exit()
 
     def change_tab(self, n):
