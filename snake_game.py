@@ -241,7 +241,7 @@ class SnakePlayer:
 
         if (head_x, head_y) in snake_positions[1:]:
             return True
-        if (head_x, head_y) == self.poison_position:
+        if (head_x, head_y) in self.poison_position:
             return True
         return False
 
