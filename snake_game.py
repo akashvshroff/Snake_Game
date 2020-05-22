@@ -188,7 +188,7 @@ class SnakePlayer:
             x_position = randint(2, 17) * self.segment_size
             y_position = randint(2, 17) * self.segment_size
             poison_position = (x_position, y_position)
-            if poison_position in self.snake_positions or poison_position == self.food_position:
+            if poison_position in self.snake_positions or poison_position == self.food_position or poison_position in self.poison_position:
                 continue
             else:
                 self.poison_position.append(poison_position)
@@ -280,8 +280,10 @@ class SnakePlayer:
             self.draw_obj()
             font = pygame.font.Font(None, 26)
             score_text = font.render('SCORE: {:02}'.format(self.score), True, self.text_colour)
+            mode_text = font.render('MODE: {}'.format(self.diff.upper()), True, self.text_colour)
             user_text = font.render("NAME: {}".format(self.user_name), True, self.text_colour)
             self.screen.blit(user_text, (10, 10))
+            self.screen.blit(mode_text, (150, 10))
             self.screen.blit(score_text, (300, 10))
 
             pygame.display.update()
@@ -297,13 +299,13 @@ class SnakePlayer:
 
             if self.check_food_collision():
                 self.set_new_food_positions()
+                self.score += 1
                 if not self.easy_game:  # for hard game there is a poison block that changes every time you eat.
                     if self.score > 4 and self.score % 5 == 0:
                         self.set_poison_position()
                 else:
-                    if self.score > 7 and self.score % 7 == 0:
+                    if self.score > 7 and self.score % 8 == 0:
                         self.set_poison_position()
-                self.score += 1
                 if self.delay > 0.01:
                     self.delay -= self.delay_reduction
                 else:
@@ -313,6 +315,8 @@ class SnakePlayer:
 
     def pop_up(self):
         sc, self.score, self.delay = self.score, 0, 0.2
+        self.eye_position_1 = (204, 188)
+        self.eye_position_2 = (212, 188)
         self.snake_positions = [(200, 180)]
         self.poison_position = []
         self.current_direction = None
@@ -354,6 +358,7 @@ class SnakePlayer:
         self.login_text.set('All the best, {}. Choose a level.'.format(self.user_name))
 
     def change_level(self):
+        self.login_text.set('Choose a mode, {}'.format(self.user_name))
         self.easy_btn['state'] = NORMAL
         self.hard_btn['state'] = NORMAL
 
@@ -361,12 +366,12 @@ class SnakePlayer:
         if n == 0:
             self.easy_game = True
             self.diff = 'easy'
-            self.delay_reduction = 0.006
+            self.delay_reduction = 0.007
             self.diff_id = 1
         else:
             self.easy_game = False
             self.diff = 'hard'
-            self.delay_reduction = 0.003
+            self.delay_reduction = 0.004
             self.diff_id = 2
         self.login_text.set('All the best, {}. Level: {}.'.format(
             self.user_name, self.diff.upper()))
@@ -379,7 +384,6 @@ class SnakePlayer:
     def update_leaderboard(self):
         # updates the leaderboard after every turn
         # re-initialises score
-        'get the diff id and then do it'
         self.cur.execute('INSERT INTO Scores (username, score, diff_id) VALUES (?,?,?)',
                          (self.user_name, self.score, self.diff_id))
         self.conn.commit()
@@ -399,7 +403,7 @@ class SnakePlayer:
             for i, (name, sc) in enumerate(score_data):
                 if i >= 5:
                     break
-                score_info += '{} PLACE. {} : {}\n'.format(self.ordinal(i+1), name, sc)
+                score_info += '{} PLACE: {} : {}\n'.format(self.ordinal(i+1), name, sc)
         else:
             score_info = 'There are no scores to display yet.'
         self.score_text.delete('1.0', END)
