@@ -54,7 +54,7 @@ class SnakePlayer:
         self.start_playing_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699', state=DISABLED,
                                         font=('System', 12, 'bold'), text='START GAME', command=self.play_game)
         self.leaderboard_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699',
-                                      font=('System', 12, 'bold'), text='LEADERBOARD', command=lambda: self.change_tab(1))
+                                      font=('System', 12, 'bold'), state=DISABLED, text='LEADERBOARD', command=lambda: self.change_tab(1))
         self.quit_program_btn = Button(self.tab1, fg='#f8f8ff', width=42,
                                        bg='#336699', text='QUIT THE PROGRAM', font=('System', 12, 'bold'), command=self.quit_prg)
         self.start_playing_btn.place(relx=0.015, rely=0.78)
@@ -94,8 +94,8 @@ class SnakePlayer:
             'CREATE TABLE IF NOT EXISTS Scores (username text, score int, diff_id int)')
         # 1 for easy, 2 for tough
         self.cur.execute('CREATE TABLE IF NOT EXISTS Diff (name text, id primary key)')
-        self.cur.execute('INSERT INTO Diff (name, id) VALUES (?,?)', ('easy', 1),)
-        self.cur.execute('INSERT INTO Diff (name, id) VALUES (?,?)', ('hard', 2),)
+        self.cur.execute('INSERT OR IGNORE INTO Diff (name, id) VALUES (?,?)', ('easy', 1),)
+        self.cur.execute('INSERT OR IGNORE INTO Diff (name, id) VALUES (?,?)', ('hard', 2),)
 
         # regular variables
         Colour = namedtuple("Colour", ["r", "g", "b"])
@@ -124,12 +124,15 @@ class SnakePlayer:
         self.user_name = ''
         self.current_direction = None
         self.food_position = 0, 0
-        self.poison_position = None
+        self.poison_position = []
+        self.eye_position_1 = (204, 188)
+        self.eye_position_2 = (212, 188)
         self.delay = 0.2
         self.delay_reduction = 0
         self.score = 0
         self.easy_game = None
         self.diff = ''
+        self.diff_id = 0
 
     def draw_grid(self):
         # draws the pygame grid
@@ -140,16 +143,29 @@ class SnakePlayer:
                 pygame.draw.rect(self.screen, self.border_colour, [
                                  i, j, self.segment_size, self.segment_size], 1)
 
+    def set_eye_position(self):
+        head_x, head_y = self.snake_positions[0]
+        if self.current_direction == 'Right' or self.current_direction == 'Left':
+            self.eye_position_1, self.eye_position_2 = (
+                head_x + 8, head_y + 12), (head_x + 8, head_y + 4)
+        elif self.current_direction == 'Up' or self.current_direction == 'Down':
+            self.eye_position_1, self.eye_position_2 = (
+                head_x + 4, head_y + 8), (head_x + 12, head_y + 8)
+
     def draw_obj(self):
         # draws the food and the snake
+        self.set_eye_position()
         pygame.draw.rect(self.screen, self.food_colour, [
                          self.food_position, (self.segment_size, self.segment_size)])
         if self.poison_position:
-            pygame.draw.rect(self.screen, self.poison_colour, [
-                             self.poison_position, (self.segment_size, self.segment_size)])
+            for x, y in self.poison_position:
+                pygame.draw.rect(self.screen, self.poison_colour, [
+                    x, y, self.segment_size, self.segment_size])
         for x, y in self.snake_positions:
             pygame.draw.rect(self.screen, self.snake_colour, [
                              x, y, self.segment_size, self.segment_size])
+        pygame.draw.rect(self.screen, self.poison_colour, [self.eye_position_1, (4, 4)])
+        pygame.draw.rect(self.screen, self.poison_colour, [self.eye_position_2, (4, 4)])
 
     def set_new_food_positions(self):
         # randomizes and checks the food position
@@ -169,10 +185,10 @@ class SnakePlayer:
             x_position = randint(2, 17) * self.segment_size
             y_position = randint(2, 17) * self.segment_size
             poison_position = (x_position, y_position)
-            if poison_position in self.snake_positions or poison_position == food_position:
+            if poison_position in self.snake_positions or poison_position == self.food_position:
                 continue
             else:
-                self.poison_position = poison_position
+                self.poison_position.append(poison_position)
                 break
 
     def move_snake(self):
@@ -249,7 +265,7 @@ class SnakePlayer:
         self.screen = pygame.display.set_mode(self.win_dimensions)
 
         self.snake_positions = [(200, 180)]
-        self.set_new_food_positions(self.snake_positions)
+        self.set_new_food_positions()
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -277,9 +293,12 @@ class SnakePlayer:
                 self.pop_up()
 
             if self.check_food_collision():
-                self.set_new_food_positions(self.snake_positions)
+                self.set_new_food_positions()
                 if not self.easy_game:  # for hard game there is a poison block that changes every time you eat.
-                    if self.score > 6:
+                    if self.score > 5 and self.score % 6 == 0:
+                        self.set_poison_position()
+                else:
+                    if self.score > 7 and self.score % 8 == 0:
                         self.set_poison_position()
                 self.score += 1
                 if self.delay > 0.01:
@@ -287,16 +306,12 @@ class SnakePlayer:
                 else:
                     self.delay = 0.01
 
-            if self.easy_game:
-                if self.score > 5 and self.score % 6 == 0:
-                    self.set_poison_position()
-
             self.clock.tick(30)
 
     def pop_up(self):
         sc, self.score, self.delay = self.score, 0, 0.2
         self.snake_positions = [(200, 180)]
-        self.poison_position = None
+        self.poison_position = []
         self.current_direction = None
         death_text = 'YOUR SCORE WAS {:02}.'.format(sc)
         self.death_win = Tk()
@@ -340,20 +355,23 @@ class SnakePlayer:
             self.easy_game = True
             self.diff = 'easy'
             self.delay_reduction = 0.006
+            self.diff_id = 1
         else:
             self.easy_game = False
             self.diff = 'hard'
             self.delay_reduction = 0.003
+            self.diff_id = 2
         self.login_text.set('All the best, {}. Level: {}.'.format(
             self.user_name, self.diff.upper()))
         self.start_playing_btn['state'] = NORMAL
+        self.leaderboard_btn['state'] = NORMAL
 
     def update_leaderboard(self):
         # updates the leaderboard after every turn
         # re-initialises score
         'get the diff id and then do it'
-        self.cur.execute('INSERT INTO Scores (username, score) VALUES (?,?)',
-                         (self.user_name, self.score))
+        self.cur.execute('INSERT INTO Scores (username, score, diff_id) VALUES (?,?,?)',
+                         (self.user_name, self.score, self.diff_id))
         self.conn.commit()
 
     def ordinal(self, n): return "%d%s" % (
@@ -362,14 +380,16 @@ class SnakePlayer:
     def show_leaderboard(self):
         # gets the data from the sql database and then shows it
         self.score_text.configure(state='normal')
-        self.cur.execute("SELECT * FROM Scores ORDER BY score DESC")
+        self.cur.execute(
+            "SELECT username,score FROM Scores WHERE diff_id = ? ORDER BY score DESC", (self.diff_id,))
         score_data = self.cur.fetchall()
         score_info = ''
+        score_info += 'MODE: {}\n\n'.format(self.diff.upper())
         if score_data:
             for i, (name, sc) in enumerate(score_data):
                 if i >= 5:
                     break
-                score_info += '{}. {} : {}\n'.format(self.ordinal(i+1), name, sc)
+                score_info += '{} PLACE. {} : {}\n'.format(self.ordinal(i+1), name, sc)
         else:
             score_info = 'There are no scores to display yet.'
         self.score_text.delete('1.0', END)
