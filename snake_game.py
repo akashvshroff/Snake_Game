@@ -31,10 +31,10 @@ class SnakePlayer:
         self.title = Label(self.tab1, text='WELCOME TO SNAKE', font=(
             'System', 18, 'bold'), fg='#f8f8ff', bg='#336699')
         self.title.place(relx=0.15, rely=0.05)
-        self.rules = 'Eat as much of the pink food as you can to grow but beware, if you eat yourself, you will die. On easy mode, if you collide with the wall, then you will stop moving. On hard, if you try to leave the bounds, you will die. For both, there will also be poison that is deep black. DO NOT EAT IT. Move using the arrow keys, the larger you get, the faster you move. Enter your name below, choose your difficulty and get started.'
+        self.rules = 'Eat the pink food to grow. Move around using your arrow keys. On EASY MODE: colliding with the walls stops you. On HARD MODE: colliding with the walls kills you. Black poison will appear soon. DO NOT EAT IT. If you try to eat yourself, YOU WILL DIE. The larger you get, the faster you move. Enter your name below, set your level and begin playing.'
         self.rules_display = Message(self.tab1, text=self.rules, fg='#f8f8ff', bg='#336699', width=450,
                                      font=('System', 12), justify=LEFT)
-        self.rules_display.place(relx=0, rely=0.15)
+        self.rules_display.place(relx=0, rely=0.18)
         self.login_text = StringVar()
         self.login_text.set("Enter username.")
         self.login_entry = Entry(self.tab1, textvariable=self.login_text, width=34,
@@ -44,12 +44,15 @@ class SnakePlayer:
                                 font=('System', 12, 'bold'), text='SUBMIT', command=self.get_username)
         self.login_btn.place(relx=0.74, rely=0.57)
 
-        self.easy_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699',
+        self.easy_btn = Button(self.tab1, fg='#f8f8ff', width=13, bg='#336699',
                                font=('System', 12, 'bold'), text='EASY MODE', state=DISABLED, command=lambda: self.get_level(0))
-        self.hard_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699',
+        self.hard_btn = Button(self.tab1, fg='#f8f8ff', width=13, bg='#336699',
                                font=('System', 12, 'bold'), text='HARD MODE', state=DISABLED, command=lambda: self.get_level(1))
+        self.change_level_btn = Button(self.tab1, fg='#f8f8ff', width=13, bg='#336699',
+                                       font=('System', 12, 'bold'), text='CHANGE MODE', state=DISABLED, command=self.change_level)
         self.easy_btn.place(relx=0.015, rely=0.68)
-        self.hard_btn.place(relx=0.515, rely=0.68)
+        self.hard_btn.place(relx=0.342, rely=0.68)
+        self.change_level_btn.place(relx=0.67, rely=0.68)
 
         self.start_playing_btn = Button(self.tab1, fg='#f8f8ff', width=20, bg='#336699', state=DISABLED,
                                         font=('System', 12, 'bold'), text='START GAME', command=self.play_game)
@@ -78,7 +81,7 @@ class SnakePlayer:
         self.update_leaderboard_btn = Button(self.tab2, fg='#f8f8ff', width=19, height=1, font=(
             'System', 12, 'bold'), text=r'UPDATE SCORES', bg='#336699', command=self.show_leaderboard)
         self.play_more_btn = Button(self.tab2, fg='#f8f8ff', width=19, height=1, font=(
-            'System', 12, 'bold'), text='PLAY AGAIN', bg='#336699', command=self.play_game)
+            'System', 12, 'bold'), text='MAIN MENU', bg='#336699', command=lambda: self.change_tab(0))
         self.quit_prog_btn = Button(self.tab2, fg='#f8f8ff', width=39, height=1, font=(
             'System', 12, 'bold'), text='QUIT PROGRAM', bg='#336699', command=self.quit_prg)
 
@@ -295,10 +298,10 @@ class SnakePlayer:
             if self.check_food_collision():
                 self.set_new_food_positions()
                 if not self.easy_game:  # for hard game there is a poison block that changes every time you eat.
-                    if self.score > 5 and self.score % 6 == 0:
+                    if self.score > 4 and self.score % 5 == 0:
                         self.set_poison_position()
                 else:
-                    if self.score > 7 and self.score % 8 == 0:
+                    if self.score > 7 and self.score % 7 == 0:
                         self.set_poison_position()
                 self.score += 1
                 if self.delay > 0.01:
@@ -350,6 +353,10 @@ class SnakePlayer:
         self.hard_btn['state'] = NORMAL
         self.login_text.set('All the best, {}. Choose a level.'.format(self.user_name))
 
+    def change_level(self):
+        self.easy_btn['state'] = NORMAL
+        self.hard_btn['state'] = NORMAL
+
     def get_level(self, n):
         if n == 0:
             self.easy_game = True
@@ -363,8 +370,11 @@ class SnakePlayer:
             self.diff_id = 2
         self.login_text.set('All the best, {}. Level: {}.'.format(
             self.user_name, self.diff.upper()))
+        self.easy_btn['state'] = DISABLED
+        self.hard_btn['state'] = DISABLED
         self.start_playing_btn['state'] = NORMAL
         self.leaderboard_btn['state'] = NORMAL
+        self.change_level_btn['state'] = NORMAL
 
     def update_leaderboard(self):
         # updates the leaderboard after every turn
