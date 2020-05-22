@@ -75,7 +75,8 @@ class SnakePlayer:
         self.score_text = Text(self.tab2, font=('System', 20, 'bold'),
                                height=8, width=25, bg='#f8f8ff', fg='#336699')  # change colour to lighter
         self.score_text.place(relx=0.055, rely=0.16)
-        self.score_text.insert(INSERT, 'Click update scores.')
+        self.score_text.insert(
+            INSERT, 'Click update scores to see the score for your difficulty level.')
         self.score_text.configure(state='disabled')
 
         self.update_leaderboard_btn = Button(self.tab2, fg='#f8f8ff', width=19, height=1, font=(
