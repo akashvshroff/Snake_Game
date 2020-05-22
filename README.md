@@ -8,7 +8,7 @@
 
 # Description:
 
-- UPDATE: I have since added different difficulties to the game and a poison block that when you eat, you die. The number of such blocks increase at a different rate for each difficulty.
+- UPDATE: I have since added different difficulties to the game and a poison block that when you eat, you die. The number of such blocks increase at a different rate for each difficulty. I also added eyes to the snake that vary based on the direction you are moving.
 - The program itself at its base is rather simple and cleanly written (or atleast that is what I attempted) bearing in mind OOP.
 - The constructor of the class handles the set-up of the Tkinter window and tabs while the play_game function houses the PyGame initialisation and the game loop as shown below.
 
